@@ -1,170 +1,808 @@
 # CODESYS 4 Docker + HTTPS Reverse Proxy
 
-Production-oriented deployment layout for CODESYS 4 on Linux/Raspberry Pi.
+Run **CODESYS 4 on Linux and Raspberry Pi using Docker**.
 
-## Architecture
+This package provides a ready-to-run CODESYS 4 environment with an HTTPS web interface. CODESYS 4 runs inside Docker, while NGINX provides HTTPS access.
 
-Browser
-  |
-  | HTTPS :443
-  v
-NGINX
-  |
-  | HTTP :8080
-  v
-CODESYS 4 c4-server
+No CODESYS 4 installation is required on the host operating system.
 
-CODESYS 4 is not exposed directly to the host. NGINX terminates TLS and
-reverse-proxies Web UI/WebSocket traffic to the CODESYS container.
+---
 
-## Images
+## What You Get
 
-CODESYS 4:
+The package provides:
 
-    jugaadtech/codesys-4:1.0.0.0-arm64
-    jugaadtech/codesys-4:1.0.0.0-amd64
+- CODESYS 4 runtime/server
+- Docker-based deployment
+- Linux support
+- Raspberry Pi ARM64 support
+- AMD64 Linux support
+- HTTPS web access
+- Automatic self-signed certificate generation
+- Persistent CODESYS configuration
+- Persistent TLS certificates
+- Automatic Docker image download from Docker Hub
+- No local Docker image build required
 
-NGINX:
+The customer does **not** need to build the Docker images or install CODESYS 4 directly on Linux.
 
-    jugaadtech/codesys-4-nginx:1.0.0
+---
 
-A multi-architecture CODESYS tag can later be published as:
+# Requirements
 
-    jugaadtech/codesys-4:1.0.0.0
+Before starting, make sure your system has:
 
-## First test
+## Hardware
 
-Copy `.env.example` to `.env` and adjust `CODESYS_IP` to the host IP if
-browser access will be performed using the IP address.
+One of the following:
 
-Then:
+- Raspberry Pi with a supported 64-bit Linux operating system
+- AMD64/x86-64 Linux computer or server
 
-    docker compose up -d --build
+## Software
 
-Check:
+Install:
 
-    docker compose ps
-    docker compose logs --tail=100 codesys-4
-    docker compose logs --tail=100 codesys-4-nginx
+- Docker
+- Docker Compose
 
-Open:
+Verify Docker:
 
-    https://<HOST-IP>/
+```bash
+sudo docker --version
+```
 
-HTTP automatically redirects to HTTPS.
+Verify Docker Compose V2:
 
-Because the default certificate is self-signed, the browser will display a
-certificate warning until the certificate is trusted.
+```bash
+sudo docker compose version
+```
 
-## CODESYS login
+If the `docker compose` command is not available, check for the older Docker Compose command:
 
-The CODESYS container runs c4-server as a non-root Linux user.
+```bash
+sudo docker-compose version
+```
 
-The user must belong to the `codesys-4` group. The default container setup
-creates `admin` with the configured UID/GID and adds it to `codesys-4`.
+If either Compose command returns a version number, you can use that command throughout this guide.
 
-Set the password after the first deployment:
+> **Note:** Some Linux systems use `docker compose`, while older installations use `docker-compose`. Both are supported by this deployment package.
 
-    docker exec -it codesys-4 passwd admin
+---
 
-Verify:
+# Installation
 
-    docker exec codesys-4 id admin
+## 1. Download the Deployment Package
 
-The password is stored inside the container filesystem. For a production
-deployment, use a persistent/secure credential initialization mechanism
-rather than relying on a default password.
+Clone this repository:
 
-## Certificate
+```bash
+sudo git clone https://github.com/Jugaadtech/codesys-4-docker.git
+```
 
-The NGINX entrypoint creates the certificate automatically on first start.
+Enter the directory:
 
-Certificate:
+```bash
+cd codesys-4-docker
+```
 
-    /etc/ssl/certs/codesys-4-certificate.crt
+Alternatively, download the ZIP package from the GitHub Releases page and extract it.
 
-Private key:
+> **Note:** If Git is not installed, install it using your Linux distribution's package manager.
 
-    /etc/ssl/private/codesys-4.key
+---
 
-Both are stored in named Docker volumes:
+# 2. Download the CODESYS 4 Docker Images
 
-    codesys-4-certs
-    codesys-4-private
+### Using Docker Compose V2
 
-Therefore a normal container restart does not generate a new certificate.
+If your system supports:
 
-The generated certificate is self-signed and intended for development/testing.
-For production, replace it with a CA-issued certificate while keeping the
-same NGINX certificate/key paths.
+```bash
+sudo docker compose version
+```
 
-## Build NGINX image
+run:
 
-    docker build \
-      -f Dockerfile.nginx \
-      -t jugaadtech/codesys-4-nginx:1.0.0 .
+```bash
+sudo docker compose pull
+```
 
-Push:
+### Using Docker Compose V1 / legacy command
 
-    docker push jugaadtech/codesys-4-nginx:1.0.0
+If your system uses:
 
-The official nginx:1.29-alpine base supports both amd64 and arm64, so the
-NGINX image can also be published as a multi-architecture image.
+```bash
+sudo docker-compose version
+```
 
-## Build CODESYS 4 architecture-specific images
+run:
 
-ARM64 on Raspberry Pi:
+```bash
+sudo docker-compose pull
+```
 
-    docker buildx build \
-      --platform linux/arm64 \
-      -t jugaadtech/codesys-4:1.0.0.0-arm64 \
-      --push .
+This downloads the required CODESYS 4 and HTTPS gateway images from Docker Hub.
 
-AMD64 on Debian/VM:
+---
 
-    docker buildx build \
-      --platform linux/amd64 \
-      -t jugaadtech/codesys-4:1.0.0.0-amd64 \
-      --push .
+# 3. Start CODESYS 4
 
-The proprietary CODESYS Debian package must be supplied in `output/`.
+### Docker Compose V2
 
-## Publish CODESYS multi-architecture manifest
+```bash
+sudo docker compose up -d
+```
 
-After both architecture images are available:
+### Legacy Docker Compose
 
-    docker manifest create \
-      jugaadtech/codesys-4:1.0.0.0 \
-      jugaadtech/codesys-4:1.0.0.0-arm64 \
-      jugaadtech/codesys-4:1.0.0.0-amd64
+```bash
+sudo docker-compose up -d
+```
 
-    docker manifest push jugaadtech/codesys-4:1.0.0.0
+That's it.
 
-Verify:
+You do **not** need to:
 
-    docker buildx imagetools inspect jugaadtech/codesys-4:1.0.0.0
+- Build a Docker image
+- Install a CODESYS `.deb` package
+- Install CODESYS 4 directly on Linux
+- Configure NGINX manually
+- Generate an SSL certificate manually
 
-## Publish NGINX multi-architecture image
+The required Docker images and HTTPS configuration are provided by this deployment package.
 
-Recommended:
+---
 
-    docker buildx build \
-      --platform linux/amd64,linux/arm64 \
-      -f Dockerfile.nginx \
-      -t jugaadtech/codesys-4-nginx:1.0.0 \
-      --push .
+# Check the Installation
 
-Verify:
+Check the running containers.
 
-    docker buildx imagetools inspect jugaadtech/codesys-4-nginx:1.0.0
+### Docker Compose V2
 
-## Important
+```bash
+sudo docker compose ps
+```
 
-Do not configure TLS inside c4-server. CODESYS 4 c4-server exposes HTTP and
-NGINX provides the HTTPS endpoint.
+### Legacy Docker Compose
 
-Do not use `127.0.0.1:8080` in the NGINX container. The correct upstream is:
+```bash
+sudo docker-compose ps
+```
 
-    proxy_pass http://codesys-4:8080;
+You should see two services:
 
-because `codesys-4` is the Docker Compose service name.
+```text
+codesys-4
+codesys-4-nginx
+```
+
+Both services should be running.
+
+You can also check the logs.
+
+### Docker Compose V2
+
+```bash
+sudo docker compose logs -f
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose logs -f
+```
+
+Press:
+
+```text
+Ctrl+C
+```
+
+to leave the log view.
+
+---
+
+# Open CODESYS 4
+
+Find the IP address of the computer running Docker:
+
+```bash
+hostname -I
+```
+
+For example:
+
+```text
+192.168.1.100
+```
+
+Open a web browser on a computer connected to the same network and go to:
+
+```text
+https://192.168.1.100/
+```
+
+Replace the IP address with the IP address of your Linux/Raspberry Pi system.
+
+---
+
+# HTTPS Certificate
+
+The first time the system starts, it automatically generates a self-signed HTTPS certificate.
+
+Your browser may therefore display a warning such as:
+
+> Your connection is not private
+
+This is expected when using the automatically generated self-signed certificate.
+
+For a test or local installation, you can proceed to the CODESYS 4 web interface.
+
+The certificate is stored in Docker volumes and is reused when the containers are restarted.
+
+For production deployments, a trusted CA-issued certificate can be used instead of the automatically generated self-signed certificate.
+
+---
+
+# CODESYS 4 Access
+
+CODESYS 4 runs internally in Docker and is accessed through the HTTPS gateway.
+
+The architecture is:
+
+```text
+Web Browser
+     |
+     | HTTPS
+     | Port 443
+     v
++------------------+
+|      NGINX       |
+|  HTTPS Gateway   |
++------------------+
+         |
+         | Internal Docker Network
+         | HTTP :8080
+         v
++------------------+
+|    CODESYS 4     |
+|     Server       |
++------------------+
+```
+
+CODESYS 4 is not directly exposed on the host network.
+
+---
+
+# Starting and Stopping CODESYS 4
+
+## Stop
+
+### Docker Compose V2
+
+```bash
+sudo docker compose down
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose down
+```
+
+Your persistent configuration and certificates are retained.
+
+---
+
+## Start Again
+
+### Docker Compose V2
+
+```bash
+sudo docker compose up -d
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose up -d
+```
+
+---
+
+# Restart
+
+### Docker Compose V2
+
+```bash
+sudo docker compose restart
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose restart
+```
+
+---
+
+# Updating
+
+When a new version is released, download the updated deployment package.
+
+Then download the latest Docker images.
+
+### Docker Compose V2
+
+```bash
+sudo docker compose pull
+sudo docker compose up -d
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose pull
+sudo docker-compose up -d
+```
+
+Docker will download the newer images from Docker Hub.
+
+---
+
+# Viewing Logs
+
+## CODESYS 4 Logs
+
+### Docker Compose V2
+
+```bash
+sudo docker compose logs -f codesys-4
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose logs -f codesys-4
+```
+
+---
+
+## NGINX / HTTPS Logs
+
+### Docker Compose V2
+
+```bash
+sudo docker compose logs -f codesys-4-nginx
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose logs -f codesys-4-nginx
+```
+
+---
+
+## All Logs
+
+### Docker Compose V2
+
+```bash
+sudo docker compose logs -f
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose logs -f
+```
+
+Press `Ctrl+C` to stop viewing the logs.
+
+---
+
+# Network Ports
+
+The standard installation uses:
+
+| Port | Protocol | Purpose |
+|---:|---|---|
+| 80 | HTTP | Redirects to HTTPS |
+| 443 | HTTPS | CODESYS 4 web access |
+| 8080 | Internal | CODESYS 4 service |
+
+Port `8080` is **not exposed directly to the host**.
+
+Users should access CODESYS 4 through:
+
+```text
+https://<device-ip>/
+```
+
+---
+
+# Configuration
+
+The standard installation requires no configuration.
+
+Simply run:
+
+### Docker Compose V2
+
+```bash
+sudo docker compose pull
+sudo docker compose up -d
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose pull
+sudo docker-compose up -d
+```
+
+An optional `.env` file can be used for advanced configuration.
+
+For example:
+
+```text
+CODESYS_HTTP_PORT=80
+CODESYS_HTTPS_PORT=443
+CODESYS_HOSTNAME=codesys-4
+CODESYS_IP=
+CERT_DAYS=365
+```
+
+Most users do not need to modify these settings.
+
+---
+
+# Raspberry Pi
+
+For Raspberry Pi systems, make sure you are running a 64-bit operating system.
+
+Check the architecture:
+
+```bash
+uname -m
+```
+
+A typical ARM64 system reports:
+
+```text
+aarch64
+```
+
+The CODESYS 4 Docker image is provided for ARM64.
+
+---
+
+# AMD64 Linux
+
+For an AMD64/x86-64 Linux system:
+
+```bash
+uname -m
+```
+
+typically returns:
+
+```text
+x86_64
+```
+
+The corresponding Docker image is provided for AMD64.
+
+When a multi-architecture image is available, Docker automatically selects the appropriate image for the host architecture.
+
+---
+
+# Persistent Data
+
+The deployment uses Docker volumes for persistent TLS data.
+
+The CODESYS `/home` directory is also mapped to the host so that CODESYS configuration and project-related data can persist across container recreation.
+
+Removing and recreating the containers does not automatically remove these persistent resources.
+
+---
+
+# Troubleshooting
+
+## CODESYS 4 Does Not Start
+
+Check the container status.
+
+### Docker Compose V2
+
+```bash
+sudo docker compose ps
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose ps
+```
+
+Then check the CODESYS logs.
+
+### Docker Compose V2
+
+```bash
+sudo docker compose logs codesys-4
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose logs codesys-4
+```
+
+---
+
+## HTTPS Does Not Open
+
+Check the NGINX service.
+
+### Docker Compose V2
+
+```bash
+sudo docker compose logs codesys-4-nginx
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose logs codesys-4-nginx
+```
+
+Also verify that port 443 is available:
+
+```bash
+sudo ss -lntp | grep :443
+```
+
+---
+
+## Port 80 or 443 Is Already in Use
+
+Check which application is using the port:
+
+```bash
+sudo ss -lntp | grep :80
+```
+
+or:
+
+```bash
+sudo ss -lntp | grep :443
+```
+
+You can use different host ports through the optional `.env` configuration.
+
+---
+
+## Check Container Status
+
+### Docker Compose V2
+
+```bash
+sudo docker compose ps
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose ps
+```
+
+---
+
+## Restart Everything
+
+### Docker Compose V2
+
+```bash
+sudo docker compose down
+sudo docker compose up -d
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose down
+sudo docker-compose up -d
+```
+
+---
+
+# Remove the Installation
+
+To stop and remove the containers:
+
+### Docker Compose V2
+
+```bash
+sudo docker compose down
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose down
+```
+
+Your persistent volumes remain intact.
+
+## Remove Containers and Persistent Volumes
+
+Only use this if you intentionally want to remove the stored configuration and certificates.
+
+### Docker Compose V2
+
+```bash
+sudo docker compose down -v
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose down -v
+```
+
+> **Warning:** Removing volumes permanently removes the data stored in those volumes.
+
+---
+
+# Quick Reference
+
+## Start
+
+### Docker Compose V2
+
+```bash
+sudo docker compose up -d
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose up -d
+```
+
+---
+
+## Stop
+
+### Docker Compose V2
+
+```bash
+sudo docker compose down
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose down
+```
+
+---
+
+## Restart
+
+### Docker Compose V2
+
+```bash
+sudo docker compose restart
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose restart
+```
+
+---
+
+## Update Images
+
+### Docker Compose V2
+
+```bash
+sudo docker compose pull
+sudo docker compose up -d
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose pull
+sudo docker-compose up -d
+```
+
+---
+
+## Check Status
+
+### Docker Compose V2
+
+```bash
+sudo docker compose ps
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose ps
+```
+
+---
+
+## View Logs
+
+### Docker Compose V2
+
+```bash
+sudo docker compose logs -f
+```
+
+### Legacy Docker Compose
+
+```bash
+sudo docker-compose logs -f
+```
+
+---
+
+## Open CODESYS 4
+
+```text
+https://<device-ip>/
+```
+
+---
+
+# Support
+
+For product support, please provide the following information.
+
+### Container Status
+
+```bash
+sudo docker compose ps
+```
+
+If your system uses the legacy command:
+
+```bash
+sudo docker-compose ps
+```
+
+### Recent Logs
+
+```bash
+sudo docker compose logs --tail=200
+```
+
+or:
+
+```bash
+sudo docker-compose logs --tail=200
+```
+
+Also provide:
+
+- Operating system
+- Hardware platform
+- Docker version
+- Docker Compose version
+- Description of the problem
+
+---
+
+# CODESYS 4 Docker
+
+**CODESYS 4 on Linux — packaged for containerized deployment.**
