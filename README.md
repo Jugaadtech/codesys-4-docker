@@ -148,6 +148,10 @@ The deployment package contains the Docker Compose configuration and startup scr
 The recommended way to start the deployment is:
 
 ```bash
+sudo chmod +x scripts/start.sh
+```
+
+```bash
 sudo ./scripts/start.sh
 ```
 
