@@ -4,7 +4,7 @@ services:
   # CODESYS 4
   # ==========================================================================
   codesys-4:
-    image: ${CODESYS_IMAGE:-jugaadtech/codesys-4:1.0.0.0-arm64}
+    image: ${CODESYS_IMAGE:-jugaadtech/codesys-4:1.0.0.0}
 
     container_name: codesys-4
     restart: unless-stopped
