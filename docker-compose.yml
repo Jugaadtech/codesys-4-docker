@@ -1,0 +1,91 @@
+services:
+
+  # ==========================================================================
+  # CODESYS 4
+  # ==========================================================================
+  codesys-4:
+    image: ${CODESYS_IMAGE:-jugaadtech/codesys-4:1.0.0.0-arm64}
+
+    container_name: codesys-4
+    restart: unless-stopped
+
+    # CODESYS listens on 8080 inside the Docker network.
+    # It is intentionally NOT published directly to the host.
+    expose:
+      - "8080"
+
+    volumes:
+      # Persist CODESYS user/project configuration.
+      - /home:/home
+
+    environment:
+      CBE_PORT: 8080
+
+      # CODESYS must run as a non-root user.
+      CODESYS_USER: ${CODESYS_USER:-admin}
+      CODESYS_UID: ${CODESYS_UID:-1000}
+      CODESYS_GID: ${CODESYS_GID:-1000}
+      CODESYS_GROUP_GID: ${CODESYS_GROUP_GID:-1004}
+
+    networks:
+      - codesys
+
+
+  # ==========================================================================
+  # NGINX - HTTPS REVERSE PROXY
+  # ==========================================================================
+  codesys-4-nginx:
+    image: ${CODESYS_NGINX_IMAGE:-jugaadtech/codesys-4-nginx:1.0.0}
+
+    container_name: codesys-4-nginx
+    restart: unless-stopped
+
+    depends_on:
+      - codesys-4
+
+    ports:
+      # HTTP
+      - "${CODESYS_HTTP_PORT:-80}:80"
+
+      # HTTPS
+      - "${CODESYS_HTTPS_PORT:-443}:443"
+
+    environment:
+      # Used when generating the self-signed certificate.
+      CODESYS_HOSTNAME: ${CODESYS_HOSTNAME:-codesys-4}
+      CODESYS_IP: ${CODESYS_IP:-}
+
+      # Certificate validity.
+      CERT_DAYS: ${CERT_DAYS:-365}
+
+      # Certificate Common Name.
+      CERT_COMMON_NAME: ${CERT_COMMON_NAME:-codesys-4}
+
+    volumes:
+      # Persist generated TLS certificate.
+      - codesys-4-certs:/etc/ssl/certs
+
+      # Persist private TLS key.
+      - codesys-4-private:/etc/ssl/private
+
+    networks:
+      - codesys
+
+
+# ============================================================================
+# NETWORK
+# ============================================================================
+networks:
+  codesys:
+    name: codesys-4-network
+
+
+# ============================================================================
+# PERSISTENT TLS VOLUMES
+# ============================================================================
+volumes:
+  codesys-4-certs:
+    name: codesys-4-certs
+
+  codesys-4-private:
+    name: codesys-4-private
