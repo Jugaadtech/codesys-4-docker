@@ -1260,4 +1260,102 @@ sudo docker-compose pull
                           │ Docker Network
                           ▼
                   ┌───────────────┐
-                  │  
+                  │   CODESYS 4   │
+                  │     :8080     │
+                  └───────────────┘
+```
+
+The customer does **not** need:
+
+- CODESYS 4 `.deb` packages
+- Dockerfiles
+- Docker BuildKit
+- Cross-compilation
+- Manual image building
+- Manual architecture selection
+- Manual port selection
+
+The customer needs only:
+
+- A supported Linux system
+- Docker
+- Docker Compose
+- Network access to the deployment machine
+
+---
+
+# 33. Supported Deployment Platforms
+
+## ARM64
+
+Suitable for:
+
+- Raspberry Pi
+- ARM64 industrial computers
+- ARM64 Linux servers
+
+## AMD64
+
+Suitable for:
+
+- Intel-based PCs
+- AMD-based PCs
+- Industrial PCs
+- Linux servers
+- Virtual machines
+
+The same deployment package can be used across supported architectures when the multi-architecture image is used.
+
+---
+
+# 34. Support Information
+
+For deployment issues, collect the following information:
+
+```bash
+sudo docker ps -a
+```
+
+```bash
+sudo docker compose ps
+```
+
+```bash
+sudo docker logs codesys-4
+```
+
+```bash
+sudo docker logs codesys-4-nginx
+```
+
+```bash
+sudo ss -lntp
+```
+
+Also provide the system architecture:
+
+```bash
+uname -m
+```
+
+Example:
+
+```text
+aarch64
+```
+
+indicates ARM64.
+
+```text
+x86_64
+```
+
+indicates AMD64.
+
+---
+
+# 35. CODESYS 4 Docker
+
+**Jugaadtech**
+
+Dockerized CODESYS 4 deployment for Linux, ARM64 and AMD64 environments.
